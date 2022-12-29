@@ -1,11 +1,10 @@
 import gzip
 import random
-import tqdm
+from tqdm import tqdm
 import numpy as np
 
 import torch
 from torch.optim import Adam
-from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 
 from palm_rlhf_pytorch import PaLM
@@ -23,6 +22,11 @@ GENERATE_EVERY = 500
 GENERATE_LENGTH = 512
 SEQ_LEN = 1024
 
+RANDOM_SEED = 42
+
+
+torch.manual_seed(RANDOM_SEED)
+
 # helpers
 
 def cycle(loader):
@@ -30,8 +34,10 @@ def cycle(loader):
         for data in loader:
             yield data
 
+
 def decode_token(token):
     return str(chr(max(32, token)))
+
 
 def decode_tokens(tokens):
     return "".join(list(map(decode_token, tokens)))
@@ -39,7 +45,7 @@ def decode_tokens(tokens):
 
 # accelerator
 
-accelerator = Accelerator()
+accelerator = Accelerator(cpu=False)
 device = accelerator.device
 
 # instantiate palm
@@ -53,9 +59,9 @@ model = PaLM(
 # prepare enwik8 data
 
 with gzip.open("./data/enwik8.gz") as file:
-    X = np.fromstring(file.read(int(95e6)), dtype=np.uint8)
+    X = np.frombuffer(file.read(int(95e6)), dtype=np.uint8)
     trX, vaX = np.split(X, [int(90e6)])
-    data_train, data_val = torch.from_numpy(trX), torch.from_numpy(vaX)
+    data_train, data_val = torch.from_numpy(trX.copy()), torch.from_numpy(vaX.copy())
 
 
 class TextSamplerDataset(Dataset):
@@ -72,6 +78,7 @@ class TextSamplerDataset(Dataset):
     def __len__(self):
         return self.data.size(0) // self.seq_len
 
+
 train_dataset = TextSamplerDataset(data_train, SEQ_LEN)
 val_dataset = TextSamplerDataset(data_val, SEQ_LEN)
 train_loader = cycle(DataLoader(train_dataset, batch_size=BATCH_SIZE))
@@ -87,31 +94,33 @@ model, optim, train_loader, val_loader = accelerator.prepare(
 
 # training
 
-for i in tqdm.tqdm(range(NUM_BATCHES), mininterval=10.0, desc="training"):
-    model.train()
+if __name__ == "__main__":
 
-    for _ in range(GRADIENT_ACCUMULATE_EVERY):
-        loss = model(next(train_loader), return_loss = True)
-        accelerator.backward(loss / GRADIENT_ACCUMULATE_EVERY)
+    for i in tqdm(range(NUM_BATCHES), mininterval=10.0, desc="training"):
+        model.train()
 
-    accelerator.print(f"training loss: {loss.item()}")
-    accelerator.clip_grad_norm_(model.parameters(), 0.5)
+        for _ in range(GRADIENT_ACCUMULATE_EVERY):
+            loss = model(next(train_loader), return_loss=True)
+            accelerator.backward(loss / GRADIENT_ACCUMULATE_EVERY)
 
-    optim.step()
-    optim.zero_grad()
+        accelerator.print(f"training loss: {loss.item()}")
+        accelerator.clip_grad_norm_(model.parameters(), 0.5)
 
-    if i % VALIDATE_EVERY == 0:
-        model.eval()
-        with torch.no_grad():
-            loss = model(next(val_loader), return_loss = True)
-            accelerator.print(f"validation loss: {loss.item()}")
+        optim.step()
+        optim.zero_grad()
 
-    if i % GENERATE_EVERY == 0:
-        model.eval()
-        inp = random.choice(val_dataset)[:PRIME_LENGTH]
-        prime = decode_tokens(inp)
-        accelerator.print(f"%s \n\n %s", (prime, "*" * 100))
+        if i % VALIDATE_EVERY == 0:
+            model.eval()
+            with torch.no_grad():
+                loss = model(next(val_loader), return_loss=True)
+                accelerator.print(f"validation loss: {loss.item()}")
 
-        sample = model.generate(GENERATE_LENGTH, inp[None, ...])
-        output_str = decode_tokens(sample[0])
-        accelerator.print(output_str, "\n")
+        if i % GENERATE_EVERY == 0:
+            model.eval()
+            inp = random.choice(val_dataset)[:PRIME_LENGTH]
+            prime = decode_tokens(inp)
+            accelerator.print(f"{prime} \n\n {'*' * 100}")
+
+            sample = model.generate(GENERATE_LENGTH, inp[None, ...])
+            output_str = decode_tokens(sample[0])
+            accelerator.print(output_str, "\n")
