@@ -4,15 +4,19 @@ Implementation of RLHF (Reinforcement Learning with Human Feedback) on top of th
 
 If you are interested in replicating something like ChatGPT out in the open, please consider joining <a href="https://discord.gg/xBPBXfcFHd">Laion <img alt="Join us on Discord" src="https://img.shields.io/discord/823813159592001537?color=5865F2&logo=discord&logoColor=white"></a>
 
-<a href="https://www.youtube.com/watch?v=sswA4j_IUxg">Yannic Kilcher</a> is also working on an <a href="https://github.com/LAION-AI/Open-Assistant">open sourced implementation</a>!
+## Community
 
-<a href="https://www.youtube.com/watch?v=SWwQ3k-DWyo">AI Coffeebreak w/ Letitia</a>
+<a href="https://carper.ai/">CarperAI</a> had been working on <a href="https://github.com/CarperAI/trlx">an RLHF framework</a> for large language models
+
+<a href="https://www.youtube.com/watch?v=sswA4j_IUxg">Yannic Kilcher</a> is also working on an <a href="https://github.com/LAION-AI/Open-Assistant">open sourced implementation</a>
+
+<a href="https://www.youtube.com/watch?v=SWwQ3k-DWyo">AI Coffeebreak w/ Letitia</a> | <a href="https://www.youtube.com/watch?v=NpmnWgQgcsA">Code Emporium</a>
 
 ## Appreciation
 
 - <a href="https://stability.ai/">Stability.ai</a> for the generous sponsorship to work on cutting edge artificial intelligence research
 
-- <a href="https://huggingface.co/">🤗 Huggingface</a> and <a href="https://carper.ai/">CarperAI</a> for penning the blog post <a href="https://huggingface.co/blog/rlhf">Illustrating Reinforcement Learning from Human Feedback (RLHF)</a>, and the former also for their <a href="https://huggingface.co/docs/accelerate/index">accelerate</a> library
+- <a href="https://huggingface.co/">🤗 Hugging Face</a> and <a href="https://carper.ai/">CarperAI</a> for penning the blog post <a href="https://huggingface.co/blog/rlhf">Illustrating Reinforcement Learning from Human Feedback (RLHF)</a>, and the former also for their <a href="https://huggingface.co/docs/accelerate/index">accelerate</a> library
 
 ## Install
 
@@ -129,13 +133,14 @@ answer = trainer.generate(2048, prompt = prompts[0], num_samples = 10) # (<= 204
 - [x] also allow for non-LoRA based finetuning
 - [x] redo normalize to be able to have a masked version, not sure if anyone will ever use per token rewards / values, but good practice to implement
 
-- [ ] add huggingface accelerate and test out wandb instrumentation
+- [ ] add Hugging Face accelerate and test out wandb instrumentation
 - [ ] search literature to figure out what is the latest SOTA for PPO, assuming RL field is still making progress.
 - [ ] test the system using a pretrained sentiment network as reward model
 - [ ] write the memory in PPO to memmapped numpy file
 - [ ] get sampling with variable lengthed prompts working, even if it is not needed given bottleneck is human feedback
 - [ ] allow for finetuning penultimate N layers only in either actor or critic, assuming if pretrained
-
+- [ ] incorporate some learning points from Sparrow, given Letitia's video
+- [ ] simple web interface with django + htmx for collecting human feedback
 
 ## Citations
 
